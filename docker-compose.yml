@@ -1,0 +1,77 @@
+version: "3.8"
+services:
+  db:
+    image: postgres:17
+    networks:
+      - back
+    restart: always
+    env_file:
+      .env
+    expose:
+      - 5432
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+      - ./backend/docker/initpg.sh:/docker-entrypoint-initdb.d/initpg.sh
+
+  backend:
+    build: ./backend
+    env_file:
+      .env
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+    networks:
+      - back
+    volumes:
+      - backend_uploads:/fastapi_app/src/uploads
+
+  interface:
+    build:
+      context: ./frontend
+      args:
+        REACT_APP_API_URL: ${REACT_APP_API_URL} 
+    ports:
+      - "3000"
+    env_file:
+      .env
+    expose:
+      - 3000
+          environment:
+      - REACT_APP_API_URL=${REACT_APP_API_URL}
+    networks:
+      - back
+    volumes:
+      - frontend_build:/app/build 
+
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf  # Подключаем конфигурацию Nginx
+      - frontend_build:/usr/share/nginx/html  # Обслуживаем файлы из build
+    ports:
+      - "8080:8080"  # Открываем порт 8080 для фронтенда
+    depends_on:
+      - interface
+      - backend
+    networks:
+      - back
+
+networks:
+  back:
+    driver: bridge
+
+volumes:
+  postgres:
+  frontend_build:
+  backend_uploads: 

@@ -1,0 +1,120 @@
+/* Переопределение стилей для кнопок */
+.btn-primary {
+    background-color: #0e8f2c;;
+    border-color: #28a745;;
+  }
+  
+  .btn-primary:hover {
+    background-color: #6B9732;
+    border-color: #6B9732;
+  }
+  .btn-primary:disabled {
+    background-color: #6c7e56;
+    border-color: #6c7e56;
+  }
+  .btn-primary:focus {
+    background-color: #0e8f2c;
+    outline: none;
+    box-shadow: 0 0 0 0.2rem #84cc26; /* Зеленая тень для фокуса */
+}
+.btn-primary.active, .btn-primary:active {
+  background-color: #84cc26 !important;
+  border-color: #84cc26 !important;
+  box-shadow: 0 0 0 0.2rem #6B9732; /* Зеленая тень для фокуса */
+}
+
+.btn-danger{
+     background-color: #95315B;
+     border-color: #95315B;
+}
+.btn-danger:hover{
+    background-color: #954C6B;
+    border-color: #954C6B;
+}
+.progress-bar {
+  background-color: #0e8f2c; /* Цвет полосы прогресса */
+  border-radius: 15px; /* Закругление краев полосы */
+  transition: width 0.6s ease; /* Плавный переход */
+}
+.badge-primary {
+    background-color: #6B9732;
+    border-color: #6B9732;
+}
+.badge-danger {
+    background-color: #95315B;
+    border-color: #95315B;
+}
+  /* Переопределение стилей для других компонентов, если необходимо */
+  .card {
+    border: 2px solid #6B9732;
+  }
+.card-header {
+    background-color: rgba(29,47,5,0.8);
+    color: white;
+}
+.modal-header {
+    background-color: rgba(29,47,5,0.8);
+    color: white;
+}
+/* custom.css */
+.nav-pills {
+    background-color: white;
+    color:black;
+    --bs-nav-pills-link-active-bg: #109210
+}
+.menu:hover, .menu.active{
+    background-color: #109210;
+    color:white; 
+    
+}
+.menu.nav-link{
+    color:#01180A;
+}
+.menu.nav-link:hover{
+    background-color: #109210;
+    color: white;
+}
+.nav-item.active {
+    background-color: #109210; /* Зеленый цвет для активной ссылки */
+   
+  }
+/* .nav-link:hover, .nav-link.active.nav-link:hover{
+    background-color: #109210;
+    color:white;
+} */
+/* Настройка общего стиля для Navbar */
+.custom-navbar {
+    background-color: rgba(29,47,5,0.8); /* Темный фон */
+  }
+  
+  /* Настройка цвета текста для ссылок в Navbar */
+  .custom-navbar .navbar-nav .nav-link {
+    color: #ffffff; /* Белый цвет текста */
+  }
+  
+  /* Настройка цвета текста при наведении на ссылку */
+  .custom-navbar .navbar-nav .nav-link:hover {
+    color: #cccccc; /* Светло-серый цвет текста при наведении */
+  }
+  
+  /* Настройка цвета для активной ссылки */
+  .custom-navbar .navbar-nav .nav-link.active {
+    color: #00ff00; /* Зеленый цвет для активной ссылки */
+  }
+  
+  /* Настройка стиля для бренда */
+  .custom-navbar .navbar-brand {
+    color: #ffffff; /* Белый цвет текста */
+  }
+  
+  /* Настройка стиля для кнопки-тогглера */
+  .custom-navbar .navbar-toggler {
+    border-color: #ffffff; /* Белый цвет границы */
+  }
+  
+  .custom-navbar .navbar-toggler-icon {
+    background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Cpath stroke='rgba%28111, 111, 111, 1%29' stroke-width='2' linecap='round' linejoin='round' d='M4 7h22M4 15h22M4 23h22'/%3E%3C/svg%3E");
+  }
+.footer {
+    background-color: rgba(29,47,5,0.8);
+}
