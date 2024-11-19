@@ -204,8 +204,7 @@ const EditOlympList = ({onClose}) => {
                     Количество участников: {olymp.count}
                   </Row>
                   </Col>
-                  <Col>
-                  <ButtonGroup>
+                  <Col md="auto" className="p-0 px-1">
                   {olymp.is_active ? (
                     <Button
                       className="m-0"
@@ -224,7 +223,8 @@ const EditOlympList = ({onClose}) => {
                       {buttonLoading[olymp.id] ? <Spinner animation="border" size="sm" /> : "Опубликовать"}
                     </Button>
                   )}
-
+                  </Col>
+                  <Col md="auto" className="p-0 px-1">
                 <Button
                     className="m-0"
                     onClick={() => handleRaiting(olymp.id)}
@@ -232,7 +232,8 @@ const EditOlympList = ({onClose}) => {
                   >
                     Рейтинг
                   </Button>
-
+                  </Col>
+                  <Col md="auto" className="p-0 px-1">
                   <Button
                     className="m-0"
                     onClick={() => handleEdit(olymp.id)}
@@ -240,7 +241,8 @@ const EditOlympList = ({onClose}) => {
                   >
                     Редактировать
                   </Button>
-
+                  </Col>
+                  <Col md="auto" className="p-0 px-1">
                   <Button
                     variant="danger"
                     className="m-0"
@@ -249,10 +251,9 @@ const EditOlympList = ({onClose}) => {
                   >
                     {buttonLoading[olymp.id] ? <Spinner animation="border" size="sm" /> : "Удалить"}
                   </Button>
-                  </ButtonGroup>
+
                   </Col>
               </Row>
-              
             </Container>
           ))}       
     </>
