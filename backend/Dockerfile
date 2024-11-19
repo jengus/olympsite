@@ -22,7 +22,5 @@ COPY . .
 
 #RUN chmod a+x docker/app.sh
 
-#WORKDIR src
 
-#CMD gunicorn main:app --workers 1 --worker-class uvicorn.workers.UvicornWork>
 CMD ["sh", "/fastapi_app/docker/app.sh"]

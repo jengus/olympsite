@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   Container,
   Card,
-  Spinner,
+  Modal,
   Tab,
   Nav,
   Row,
@@ -12,17 +12,19 @@ import {
   Form,
   Badge,
   ListGroup,
+  Button
 } from "react-bootstrap";
 import { useUserContext } from "../../context/UserContext";
 import AnswerForm from "./AnswerForm";
 import Loading from "../Loading";
-import { notifyError, notifySuccess, notifyWarn } from "../Notification";
+import { notifyError } from "../Notification";
 const Olymp = () => {
   const { id } = useParams();
   const [olymp, setOlymp] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [token] = useUserContext();
   const [olympLoad, setOlympLoad] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const currentTime = new Date().getTime();
   const navigate = useNavigate();
 
@@ -121,6 +123,19 @@ const Olymp = () => {
       console.error("Error downloading attachment", error);
     }
   };
+  const handleEnd = () => {
+    setShowConfirm(true); // Показать окно подтверждения
+  };
+
+  const handleConfirmEnd = () => {
+    setShowConfirm(false);
+    navigate("/");
+  };
+
+  const handleCancelEnd = () => {
+    setShowConfirm(false); // Закрыть окно без действий
+  };
+
 
     if (!olympLoad) {
     return (
@@ -149,6 +164,9 @@ const Olymp = () => {
                       </Nav.Link>
                     </Nav.Item>
                   ))}
+                  <Nav.Item>
+                    <Button onClick={handleEnd} variant="danger"className="w-100">Закончить олимпиаду</Button>
+                  </Nav.Item>
                 </Nav>
               </Card>
             </Col>
@@ -259,6 +277,22 @@ const Olymp = () => {
           </Row>
         </Tab.Container>
       </Container>
+      <Modal show={showConfirm} onHide={handleCancelEnd}>
+        <Modal.Header closeButton>
+          <Modal.Title>Вы уверены?</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          Вы можете вернуться к олимпиаде в любое время до её окончания.
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleCancelEnd}>
+            Отмена
+          </Button>
+          <Button variant="primary" onClick={handleConfirmEnd}>
+            Закончить
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </>
   );
 };

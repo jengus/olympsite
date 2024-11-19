@@ -14,7 +14,7 @@ from typing import List, Dict
 from auth.models import User
 from auth.users import current_active_user, current_superuser
 from auth.schemas import RoleRead
-from olymp.schemas import OlympCreate, OlympRead, OlympUpdate,TasksRate, TaskRead, TaskCreate, TaskUpdate, TaskReadAttach, TaskAttachmentRead, AssignmentRequestItem, AnswerAttachmentRead, AnswerReadAttach,AnswerReadAttachWithRate, TaskReadWithAnswer, CheckedAnswersWithOwnRate,TotalOrgRating, LocalRating, ExpertRateForParticipant
+from olymp.schemas import OlympCreate, OlympRead, OlympReadWithCount, OlympUpdate,TasksRate, TaskRead, TaskCreate, TaskUpdate, TaskReadAttach, TaskAttachmentRead, AssignmentRequestItem, AnswerAttachmentRead, AnswerReadAttach,AnswerReadAttachWithRate, TaskReadWithAnswer, CheckedAnswersWithOwnRate,TotalOrgRating, LocalRating, ExpertRateForParticipant
 from olymp.models import TeamMembers, Answer, AnswerAttachment, Olymp, Task, TaskAttachment, ExpertTaskAssignment, RegisteredOlymp, RateAnswer
 from auth.users import get_user_or_admingeneral, get_expert_or_org, get_adm_or_expert_or_org
 from datetime import datetime, timezone
@@ -44,12 +44,39 @@ async def create_olymp(
     await session.refresh(db_olymp)
     return db_olymp
 
-@router.get("/all", response_model=List[OlympRead])
+@router.get("/all", response_model=List[OlympReadWithCount])
 async def get_olymps(
      user: User = Depends(get_user_or_admingeneral),
     session: AsyncSession = Depends(get_async_session)):
-    result = await session.execute(select(Olymp))
-    olymps = result.scalars().all()
+    # result = await session.execute(select(Olymp))
+    # olymps = result.scalars().all()
+    # return olymps
+    result = await session.execute(
+        select(
+            Olymp.id,
+            Olymp.name,
+            Olymp.description,
+            Olymp.is_active,
+            Olymp.start_date,
+            Olymp.end_date,
+            func.count(RegisteredOlymp.user_id).label("count"),
+        )
+        .join(RegisteredOlymp, Olymp.id == RegisteredOlymp.olymp_id, isouter=True)
+        .group_by(Olymp.id)
+    )
+    # Преобразуем результаты в ожидаемую схему
+    olymps = [
+        OlympReadWithCount(
+            id=row.id,
+            name=row.name,
+            description=row.description,
+            is_active=row.is_active,
+            start_date=row.start_date,
+            end_date=row.end_date,
+            count=row.count,
+        )
+        for row in result
+    ]
     return olymps
 @router.get("/active", response_model=List[OlympRead])
 async def get_active_olymp(session: AsyncSession = Depends(get_async_session)):
@@ -839,14 +866,20 @@ async def download_olymp_participant(
         raise HTTPException(status_code=404, detail="Олимпиада не найдена")
 
     query = (
-        select(RegisteredOlymp, User, TeamMembers)
+        select(
+            RegisteredOlymp,
+            User,
+            TeamMembers,
+            func.coalesce(func.avg(RateAnswer.rate), 0).label("average_rate"),
+        )
         .join(User, RegisteredOlymp.user_id == User.id)
         .outerjoin(TeamMembers, TeamMembers.team_id == User.id)
-        .join(Answer, Answer.user_id == User.id)
+        .outerjoin(Answer, Answer.user_id == User.id)
+        .outerjoin(RateAnswer, RateAnswer.answer_id == Answer.id)
         .join(Task, Task.id == Answer.task_id)
         .where(Task.olymp_id == olymp_id)
-        .distinct()
-        .order_by(User.id, TeamMembers.id)
+        .group_by(RegisteredOlymp, User, TeamMembers)
+        .order_by(func.coalesce(func.avg(RateAnswer.rate), 0).desc(), User.id, TeamMembers.id)
     )
     result = await session.execute(query)
     participants = result.all()
@@ -858,8 +891,9 @@ async def download_olymp_participant(
     ws.title = "Participants"
 
     headers = [
-        "Тип", "Фамилия участника", "Имя участника", "Отчество участника",
-        "Организация", "Фамилия руководителя", "Имя руководителя", "Отчество руководителя", "Email"
+        "ID пользователя", "Средний балл", "Тип", "Фамилия участника", "Имя участника", 
+        "Отчество участника", "Организация", "Фамилия руководителя", 
+        "Имя руководителя", "Отчество руководителя", "Email"
     ]
     ws.append(headers)
 
@@ -869,15 +903,17 @@ async def download_olymp_participant(
 
     current_user_id = None
     for record in participants:
-        reg_olymp, user_record, team_member = record
+        reg_olymp, user_record, team_member, average_rate = record
         teacher_fio = user_record.teacher.split() if user_record.teacher else ["", "", ""]
         teacher_lastname = teacher_fio[0] if len(teacher_fio) > 0 else ""
         teacher_name = teacher_fio[1] if len(teacher_fio) > 1 else ""
         teacher_surname = teacher_fio[2] if len(teacher_fio) > 2 else ""
 
-        if user_record.role_id == 6:
+        if user_record.role_id == 6:  # Команда
             if user_record.id != current_user_id:
                 ws.append([
+                    user_record.id,
+                    round(average_rate, 2),
                     "Команда",
                     team_member.lastname,
                     team_member.name,
@@ -892,6 +928,8 @@ async def download_olymp_participant(
             else:
                 ws.append([
                     "",
+                    "",
+                    "",
                     team_member.lastname,
                     team_member.name,
                     team_member.surname,
@@ -901,8 +939,10 @@ async def download_olymp_participant(
                     teacher_surname,
                     user_record.email
                 ])
-        else:
+        else:  # Индивидуальный участник
             ws.append([
+                user_record.id,
+                round(average_rate, 2),
                 "Участник",
                 user_record.lastname,
                 user_record.name,

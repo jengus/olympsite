@@ -22,6 +22,8 @@ class OlympRead(OlympBase):
 
     class Config:
          orm_mode=True
+class OlympReadWithCount(OlympRead):
+    count: int
 class OlympUpdate(OlympBase):
     name: Optional[str] = None
     description: Optional[str] = None

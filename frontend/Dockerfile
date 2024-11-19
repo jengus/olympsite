@@ -11,7 +11,7 @@ COPY . .
 
 RUN chmod -R 755 /app
 # Устанавливаем флаг CI на false для игнорирования предупреждений ESLint
-RUN CI=false npm run build && echo "Build completed successfully" || echo "Bu>
+RUN CI=false npm run build && echo "Build completed successfully" || echo "Build failed"
 RUN ls -la /app/build
 
 # Устанавливаем serve для обслуживания статики

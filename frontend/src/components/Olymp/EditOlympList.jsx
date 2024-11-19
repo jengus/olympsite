@@ -2,25 +2,25 @@ import React, {  useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Button,
-  Card,
   Row,
   Col,
   Container,
   Spinner,
+  ButtonGroup,
 } from "react-bootstrap";
 import { useUserContext } from "../../context/UserContext";
 import Loading from "../Loading";
-import { notifyError, notifySuccess, notifyWarn } from "../Notification";
+import { notifyError, notifySuccess } from "../Notification";
 
 
 
 const EditOlympList = ({onClose}) => {
-  const [token, setToken] = useUserContext();
+  const [token] = useUserContext();
   const [olymps, setOlymps] = useState([]);
   const [loading, setLoading] = useState(true);
   const [buttonLoading, setButtonLoading] = useState({});
   const navigate = useNavigate();
-  const date = new Date();
+
 
   const fetchOlymps = async () => {
     const requestOptions = {
@@ -191,7 +191,7 @@ const EditOlympList = ({onClose}) => {
             <Container key={olymp.id} className="bg-light border rounded border-dark p-2 px-3 mb-2">
               <Row style={{ fontWeight: "bold" }}>{olymp.name}</Row>
               <Row>
-                <Col>
+                  <Col>
                   <Row>
                     Дата начала:{" "}
                     {new Date(olymp.start_date + "Z").toLocaleString()}
@@ -200,8 +200,12 @@ const EditOlympList = ({onClose}) => {
                     Дата конца:{" "}
                     {new Date(olymp.end_date + "Z").toLocaleString()}
                   </Row>
-                </Col>
-                <Col md="auto" className="p-0 px-1">
+                  <Row>
+                    Количество участников: {olymp.count}
+                  </Row>
+                  </Col>
+                  <Col>
+                  <ButtonGroup>
                   {olymp.is_active ? (
                     <Button
                       className="m-0"
@@ -220,8 +224,7 @@ const EditOlympList = ({onClose}) => {
                       {buttonLoading[olymp.id] ? <Spinner animation="border" size="sm" /> : "Опубликовать"}
                     </Button>
                   )}
-                </Col>
-                <Col md="auto" className="p-0 px-1">
+
                 <Button
                     className="m-0"
                     onClick={() => handleRaiting(olymp.id)}
@@ -229,8 +232,7 @@ const EditOlympList = ({onClose}) => {
                   >
                     Рейтинг
                   </Button>
-                </Col>
-                <Col md="auto" className="p-0 px-1">
+
                   <Button
                     className="m-0"
                     onClick={() => handleEdit(olymp.id)}
@@ -238,8 +240,7 @@ const EditOlympList = ({onClose}) => {
                   >
                     Редактировать
                   </Button>
-                </Col>
-                <Col md="auto" className="p-0 px-1">
+
                   <Button
                     variant="danger"
                     className="m-0"
@@ -248,8 +249,10 @@ const EditOlympList = ({onClose}) => {
                   >
                     {buttonLoading[olymp.id] ? <Spinner animation="border" size="sm" /> : "Удалить"}
                   </Button>
-                </Col>
+                  </ButtonGroup>
+                  </Col>
               </Row>
+              
             </Container>
           ))}       
     </>
