@@ -865,34 +865,69 @@ async def download_olymp_participant(
     if not olymp:
         raise HTTPException(status_code=404, detail="Олимпиада не найдена")
 
-    query = (
+    task_query = await session.execute(select(Task.id).where(Task.olymp_id == olymp_id))
+    task_ids = [task_id for task_id, in task_query.fetchall()]
+    if not task_ids:
+        raise HTTPException(status_code=404, detail="У олимпиады нет заданий")
+
+    task_avg_query = (
+        select(
+            Answer.user_id,
+            Task.id.label("task_id"),
+            func.avg(RateAnswer.rate).label("average_task_rate"),
+        )
+        .join(RateAnswer, RateAnswer.answer_id == Answer.id)
+        .join(Task, Task.id == Answer.task_id)
+        .where(Task.id.in_(task_ids))
+        .group_by(Answer.user_id, Task.id)
+    )
+    task_avg_results = await session.execute(task_avg_query)
+    task_avg_data = task_avg_results.fetchall()
+
+    user_task_averages = {}
+    for row in task_avg_data:
+        user_id, task_id, avg_rate = row
+        if user_id not in user_task_averages:
+            user_task_averages[user_id] = {}
+        user_task_averages[user_id][task_id] = avg_rate
+
+    user_total_scores = {
+        user_id: sum(task_rates.values())
+        for user_id, task_rates in user_task_averages.items()
+    }
+
+    participants_query = (
         select(
             RegisteredOlymp,
             User,
             TeamMembers,
-            func.coalesce(func.avg(RateAnswer.rate), 0).label("average_rate"),
         )
         .join(User, RegisteredOlymp.user_id == User.id)
         .outerjoin(TeamMembers, TeamMembers.team_id == User.id)
-        .outerjoin(Answer, Answer.user_id == User.id)
-        .outerjoin(RateAnswer, RateAnswer.answer_id == Answer.id)
-        .join(Task, Task.id == Answer.task_id)
-        .where(Task.olymp_id == olymp_id)
-        .group_by(RegisteredOlymp, User, TeamMembers)
-        .order_by(func.coalesce(func.avg(RateAnswer.rate), 0).desc(), User.id, TeamMembers.id)
+        .where(
+            RegisteredOlymp.olymp_id == olymp_id,
+            User.id.in_(user_total_scores.keys()),
+        )
     )
-    result = await session.execute(query)
-    participants = result.all()
-    if not participants:
-        raise HTTPException(status_code=404, detail="Нет участников с ответами на олимпиаду")
+    participants_results = await session.execute(participants_query)
+    participants_data = participants_results.fetchall()
+
+    if not participants_data:
+        raise HTTPException(status_code=404, detail="Нет участников с ответами на задания олимпиады")
+
+    sorted_participants = sorted(
+        participants_data, 
+        key=lambda record: user_total_scores.get(record.User.id, 0), 
+        reverse=True
+    )
 
     wb = Workbook()
     ws = wb.active
     ws.title = "Participants"
 
     headers = [
-        "ID пользователя", "Средний балл", "Тип", "Фамилия участника", "Имя участника", 
-        "Отчество участника", "Организация", "Фамилия руководителя", 
+        "ID пользователя", "Итоговый балл", "Тип", "Фамилия участника", "Имя участника",
+        "Отчество участника", "Организация", "Фамилия руководителя",
         "Имя руководителя", "Отчество руководителя", "Email"
     ]
     ws.append(headers)
@@ -902,8 +937,10 @@ async def download_olymp_participant(
             cell.alignment = Alignment(horizontal="center", vertical="center")
 
     current_user_id = None
-    for record in participants:
-        reg_olymp, user_record, team_member, average_rate = record
+    for record in sorted_participants:
+        reg_olymp, user_record, team_member = record
+        total_score = round(user_total_scores.get(user_record.id, 0), 2)
+
         teacher_fio = user_record.teacher.split() if user_record.teacher else ["", "", ""]
         teacher_lastname = teacher_fio[0] if len(teacher_fio) > 0 else ""
         teacher_name = teacher_fio[1] if len(teacher_fio) > 1 else ""
@@ -913,7 +950,7 @@ async def download_olymp_participant(
             if user_record.id != current_user_id:
                 ws.append([
                     user_record.id,
-                    round(average_rate, 2),
+                    total_score,
                     "Команда",
                     team_member.lastname,
                     team_member.name,
@@ -939,10 +976,10 @@ async def download_olymp_participant(
                     teacher_surname,
                     user_record.email
                 ])
-        else:  # Индивидуальный участник
+        else: 
             ws.append([
                 user_record.id,
-                round(average_rate, 2),
+                total_score,
                 "Участник",
                 user_record.lastname,
                 user_record.name,
@@ -953,13 +990,9 @@ async def download_olymp_participant(
                 teacher_surname,
                 user_record.email
             ])
-
-    # Сохранение в памяти с использованием BytesIO
     stream = BytesIO()
     wb.save(stream)
-    stream.seek(0)  # Перемещаем указатель в начало файла
-
-    # Возвращаем файл как StreamingResponse
+    stream.seek(0)  
     response = StreamingResponse(
         content=stream,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"

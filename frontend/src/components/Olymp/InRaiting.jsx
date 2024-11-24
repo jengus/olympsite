@@ -56,7 +56,7 @@ const InRaiting = () => {
           },
         }
       );
-  
+
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
@@ -65,13 +65,11 @@ const InRaiting = () => {
         link.href = url;
         link.setAttribute("download", filename);
         document.body.appendChild(link);
-        link.click(); 
+        link.click();
         document.body.removeChild(link);
       } else {
         const data = await response.json();
-        notifyError(
-          `Ошибка загрузки файла: ${data.detail}`
-        );
+        notifyError(`Ошибка загрузки файла: ${data.detail}`);
       }
     } catch (error) {
       notifyError("Ошибка при загрузке файла:", error.message);
@@ -79,35 +77,26 @@ const InRaiting = () => {
       window.URL.revokeObjectURL(url);
     }
   };
-  
 
+  // Уникальные задания с task_num, task_id, task_weight
   const uniqueTasks = [
-    ...new Set(
-      ratingsData.flatMap((participant) =>
-        participant.tasks ? participant.tasks.map((task) => task.task_num) : []
-      )
-    ),
-  ].sort((a, b) => a - b);
-
-  const taskWeights = uniqueTasks.reduce((acc, taskNum) => {
-    ratingsData.forEach((participant) => {
-      const task = participant.tasks?.find((task) => task.task_num === taskNum);
-      if (task && !acc[taskNum]) {
-        acc[taskNum] = task.task_weight;
-      }
-    });
-    return acc;
-  }, {});
+    ...new Map(
+      ratingsData
+        .flatMap((participant) => participant.tasks || [])
+        .map((task) => [task.task_num, task]) // task_num как ключ
+    ).values(),
+  ].sort((a, b) => a.task_num - b.task_num);
 
   const totalTaskWeight = uniqueTasks.reduce(
-    (sum, taskNum) => sum + (taskWeights[taskNum] || 0),
+    (sum, task) => sum + (task.task_weight || 0),
     0
   );
 
   const participantsWithSum = ratingsData.map((participant) => {
     const totalScore = participant.tasks
       ? participant.tasks.reduce(
-          (sum, task) => sum + (task.is_checked && task.rate != null ? task.rate : 0),
+          (sum, task) =>
+            sum + (task.is_checked && task.rate != null ? task.rate : 0),
           0
         )
       : 0;
@@ -141,8 +130,8 @@ const InRaiting = () => {
     );
   };
 
-  const handleTaskClick = (taskNum, taskWeight) => {
-    setSelectedTask({ taskNum, taskWeight });
+  const handleTaskClick = (task) => {
+    setSelectedTask(task);
     setModalVisible(true);
   };
 
@@ -152,9 +141,7 @@ const InRaiting = () => {
   return (
     <>
       <Card className="mx-5 mt-2">
-      <Card.Header
-          className="d-flex justify-content-between align-items-center"
-        >
+        <Card.Header className="d-flex justify-content-between align-items-center">
           Рейтинг олимпиады
           <Button onClick={() => handleDownload(id)} disabled={loadDownloadList}>
             {loadDownloadList ? <Spinner animation="border" size="sm" /> : "Скачать данные участников"}
@@ -178,9 +165,9 @@ const InRaiting = () => {
               <tr>
                 <th>Место</th>
                 <th>Участник</th>
-                {uniqueTasks.map((taskNum) => (
-                  <th key={taskNum} onClick={() => handleTaskClick(taskNum, taskWeights[taskNum])}>
-                    Задание {taskNum} ({taskWeights[taskNum]})
+                {uniqueTasks.map((task) => (
+                  <th key={task.task_id} onClick={() => handleTaskClick(task)}>
+                    Задание {task.task_num} ({task.task_weight})
                   </th>
                 ))}
                 <th>Сумма баллов ({totalTaskWeight})</th>
@@ -198,11 +185,11 @@ const InRaiting = () => {
                   >
                     <td>{index + 1}</td>
                     <td>{participant.participant_id}</td>
-                    {uniqueTasks.map((taskNum) => {
-                      const task = participant.tasks?.find((t) => t.task_num === taskNum);
-                      const { style, value } = getCellStyleAndValue(task);
+                    {uniqueTasks.map((task) => {
+                      const taskData = participant.tasks?.find((t) => t.task_num === task.task_num);
+                      const { style, value } = getCellStyleAndValue(taskData);
                       return (
-                        <td key={taskNum} style={style}>
+                        <td key={task.task_id} style={style}>
                           {value}
                         </td>
                       );
@@ -214,7 +201,7 @@ const InRaiting = () => {
                       <td colSpan={uniqueTasks.length + 3} style={{ backgroundColor: "#f8f9fa" }}>
                         <div>
                           <strong>Email:</strong> {participant.email}
-                          <br />                          
+                          <br />
                         </div>
                       </td>
                     </tr>
@@ -229,8 +216,8 @@ const InRaiting = () => {
         token={token}
         active={modalVisible}
         handleModal={() => setModalVisible(false)}
-        task_id={selectedTask?.taskNum}
-        task_title={`Задание ${selectedTask?.taskNum}`}
+        task_id={selectedTask?.task_id} // task_id
+        task_title={`Задание ${selectedTask?.task_num}`}
         olymp_id={id}
       />
     </>
