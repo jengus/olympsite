@@ -124,17 +124,6 @@ async def get_olymp( olymp_id:int, user: User = Depends(current_active_user),
         raise HTTPException(status_code=403, detail="Нет доступа")
     return olymp
 
-@router.post("/create")
-async def create_olymp(
-    new_olymp:OlympCreate, user: User = Depends(get_user_or_admingeneral),
-    session: AsyncSession = Depends(get_async_session)):
-    new_olymp.to_utc()
-    db_olymp = Olymp(**new_olymp.dict())
-    session.add(db_olymp)
-    await session.commit()
-    await session.refresh(db_olymp)
-    return db_olymp
-
 @router.get("/{olymp_id}")
 async def get_olymp( olymp_id:int, user: User = Depends(get_user_or_admingeneral),
  session: AsyncSession = Depends(get_async_session)):
@@ -146,26 +135,6 @@ async def get_olymp( olymp_id:int, user: User = Depends(get_user_or_admingeneral
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Олимпиада не найдена")
 
     return olymp
-
-@router.delete("/{olymp_id}")
-async def del_olymp( olymp_id:int, user: User = Depends(get_user_or_admingeneral),
- session: AsyncSession = Depends(get_async_session)):
-
-    query_olymp = select(Olymp).where(Olymp.id == olymp_id)
-    olymp = await session.execute(query_olymp)
-    olymp_obj = olymp.scalars().first()
-
-    if not olymp_obj:
-        return {"status": "error", "message": "Олимпиада не найдена."}
-
-    file_directory = Path(f"uploads/{olymp_id}")
-    if file_directory.exists() and file_directory.is_dir():
-        shutil.rmtree(file_directory)
-
-    await session.delete(olymp_obj)
-    await session.commit()
-
-    return {"status": "success"}
 
 @router.patch("/{olymp_id}")
 async def update_olymp(
